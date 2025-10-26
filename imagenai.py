@@ -5,15 +5,16 @@ from io import BytesIO
 from PIL import Image
 
 # --- Configuración de la API de OpenRouter ---
-# Guarda tu API Key de OpenRouter de forma segura
-# NUNCA la expongas directamente en el código para producción.
-# Para Streamlit Cloud, usa los "Secrets".
-# Por ahora, la ponemos aquí para desarrollo local.
-OPENROUTER_API_KEY = st.secrets["OPENROUTER_API_KEY"] if "OPENROUTER_API_KEY" in st.secrets else "TU_CLAVE_AQUI" # Reemplaza con tu clave para pruebas locales
-OPENROUTER_API_URL = "https://openrouter.ai/api/v1/images/generations" # Endpoint para generación de imágenes
-# MODEL_NAME = "stability-ai/stable-diffusion-xl-turbo" # Un modelo rápido de texto a imagen
-MODEL_NAME = "stability-ai/stable-diffusion-3-medium" # Otro buen modelo para texto a imagen
+# Lee la clave de API desde los secretos de Streamlit
+# Para desarrollo local, crea un archivo .streamlit/secrets.toml
+# y añade: OPENROUTER_API_KEY="tu_clave_sk-or-v1..."
+OPENROUTER_API_KEY = st.secrets.get("OPENROUTER_API_KEY", "TU_CLAVE_AQUI_PARA_PRUEBAS_LOCALES")
 
+# Endpoint para generación de imágenes (estilo OpenAI)
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1/images/generations" 
+
+# Modelo compatible con el endpoint /images/generations
+MODEL_NAME = "openai/dall-e-2"
 
 # --- Título y Descripción de la Aplicación ---
 st.set_page_config(
@@ -25,8 +26,8 @@ st.set_page_config(
 
 st.title("🎨 Generador de Imágenes IA")
 st.markdown("""
-¡Crea imágenes increíbles usando modelos avanzados a través de OpenRouter!
-Introduce tus descripciones y personaliza los parámetros para obtener el resultado deseado.
+¡Crea imágenes increíbles usando DALL-E 2 a través de OpenRouter!
+Introduce tu descripción y elige los parámetros para obtener el resultado deseado.
 """)
 st.info(f"Modelo de IA utilizado: **{MODEL_NAME}**")
 
@@ -38,23 +39,21 @@ with st.form("image_generation_form"):
         placeholder="Un astronauta montando un caballo en Marte, estilo fotorrealista, atardecer",
         height=150
     )
-    negative_prompt = st.text_area(
-        "¿Qué NO quieres ver en la imagen? (Opcional)",
-        placeholder="Baja calidad, borroso, marcas de agua, feo, deforme",
-        height=70
-    )
 
     st.subheader("2. Parámetros de Generación")
-    col1, col2 = st.columns(2)
-    with col1:
-        width = st.slider("Ancho (px)", 256, 1024, 512, step=64)
-    with col2:
-        height = st.slider("Alto (px)", 256, 1024, 512, step=64)
+    
+    # DALL-E 2 solo acepta tamaños específicos
+    size_options = ["256x256", "512x512", "1024x1024"]
+    selected_size = st.selectbox(
+        "Dimensiones de la Imagen", 
+        size_options, 
+        index=1  # Por defecto seleccionamos "512x512"
+    )
 
     num_images = st.slider("Número de Imágenes", 1, 4, 1)
-    guidance_scale = st.slider("Escala de Guía (CFG)", 1.0, 20.0, 7.0, step=0.5)
-    steps = st.slider("Pasos de Muestreo", 10, 50, 25, step=5)
-    seed = st.number_input("Semilla (para reproducibilidad, 0 para aleatorio)", 0, 999999999, 0)
+
+    # Nota: DALL-E 2 no usa 'seed', 'guidance_scale', 'steps' ni 'negative_prompt'.
+    # Por lo tanto, esos sliders y campos de texto se han eliminado.
 
     submitted = st.form_submit_button("Generar Imagen(es)")
 
@@ -62,6 +61,8 @@ with st.form("image_generation_form"):
 if submitted:
     if not prompt:
         st.error("Por favor, introduce una descripción para generar la imagen.")
+    elif OPENROUTER_API_KEY == "TU_CLAVE_AQUI_PARA_PRUEBAS_LOCALES":
+        st.error("Por favor, añade tu OPENROUTER_API_KEY a los secretos de Streamlit.")
     else:
         st.subheader("✨ Generando tus imágenes...")
         with st.spinner("La generación puede tardar unos segundos..."):
@@ -73,16 +74,13 @@ if submitted:
                     "X-Title": "Mi Generador de Imagen Streamlit", # Un título para tu aplicación en OpenRouter
                 }
 
+                # Payload ajustado para DALL-E 2
                 payload = {
                     "model": MODEL_NAME,
                     "prompt": prompt,
                     "n": num_images,
-                    "size": f"{width}x{height}",
+                    "size": selected_size, # Usamos el string "512x512" directamente
                     "response_format": "b64_json", # Pide la imagen en base64
-                    "seed": seed if seed != 0 else None, # Si la semilla es 0, no la enviamos
-                    "guidance_scale": guidance_scale,
-                    "steps": steps,
-                    "negative_prompt": negative_prompt if negative_prompt else None,
                 }
 
                 response = requests.post(OPENROUTER_API_URL, headers=headers, json=payload, timeout=120)
