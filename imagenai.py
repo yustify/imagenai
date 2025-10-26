@@ -12,7 +12,7 @@ from PIL import Image
 OPENROUTER_API_KEY = st.secrets["OPENROUTER_API_KEY"] if "OPENROUTER_API_KEY" in st.secrets else "TU_CLAVE_AQUI" # Reemplaza con tu clave para pruebas locales
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/images/generations" # Endpoint para generación de imágenes
 # MODEL_NAME = "stability-ai/stable-diffusion-xl-turbo" # Un modelo rápido de texto a imagen
-MODEL_NAME = "runwayml/stable-diffusion-v1-5" # Otro buen modelo para texto a imagen
+MODEL_NAME = "stability-ai/stable-diffusion-3-medium" # Otro buen modelo para texto a imagen
 
 
 # --- Título y Descripción de la Aplicación ---
